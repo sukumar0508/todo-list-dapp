@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do List DApp</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <style>
+    /* Background animation */
+    body {
+      background: linear-gradient(120deg, #1e3c72, #2a5298, #6a11cb, #2575fc);
+      background-size: 400% 400%;
+      font-family: 'Arial', sans-serif;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      animation: gradientShift 6s ease infinite;
+      overflow: hidden;
+    }
+
+    @keyframes gradientShift {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    /* Container styling */
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(15px);
+      border-radius: 15px;
+      padding: 25px;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      position: relative;
+      z-index: 2;
+      overflow: hidden;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 2.5rem;
+      text-shadow: 2px 2px 8px #000;
+      color: #ffef8f;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .form-control {
+      background: rgba(255, 255, 255, 0.8);
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .form-control:focus {
+      box-shadow: none;
+      border-color: #ff6f61;
+    }
+
+    .btn {
+      background: #ff6f61;
+      border: none;
+      color: #fff;
+      transition: all 0.3s ease;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    .btn:hover {
+      background: #ff8a76;
+      transform: translateY(-3px);
+    }
+
+    .task-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .task-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 10px 15px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      transition: transform 0.2s;
+    }
+
+    .task-list li:hover {
+      transform: scale(1.03);
+    }
+
+    .task-list li span {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #fff;
+    }
+
+    .task-completed {
+      text-decoration: line-through;
+      color: #7ee081;
+    }
+
+    /* Monkeys (Animated SVGs) */
+    .moving-monkey {
+      position: absolute;
+      top: 10%;
+      left: -20%;
+      width: 100px;
+      animation: moveMonkey 6s linear infinite;
+    }
+
+    .moving-monkey:nth-child(2) {
+      top: 50%;
+      animation-delay: 2s;
+    }
+
+    .moving-monkey:nth-child(3) {
+      top: 80%;
+      animation-delay: 4s;
+    }
+
+    @keyframes moveMonkey {
+      0% {
+        left: -20%;
+      }
+      50% {
+        top: calc(50% - 100px);
+      }
+      100% {
+        left: 120%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Animated Monkeys -->
+  <svg class="moving-monkey" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="32" cy="32" r="30" fill="#FFD700" />
+    <path d="M32 15 L37 28 H27 Z" fill="#8B4513" />
+    <circle cx="32" cy="38" r="10" fill="#8B4513" />
+  </svg>
+  <svg class="moving-monkey" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="32" cy="32" r="30" fill="#FFD700" />
+    <path d="M32 15 L37 28 H27 Z" fill="#8B4513" />
+    <circle cx="32" cy="38" r="10" fill="#8B4513" />
+  </svg>
+  <svg class="moving-monkey" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="32" cy="32" r="30" fill="#FFD700" />
+    <path d="M32 15 L37 28 H27 Z" fill="#8B4513" />
+    <circle cx="32" cy="38" r="10" fill="#8B4513" />
+  </svg>
+
+  <div class="container">
+    <h1><i class="fas fa-list"></i> To-Do List DApp</h1>
+    <div class="input-group">
+      <input id="taskContent" type="text" class="form-control" placeholder="Enter Task">
+      <button class="btn" onclick="createTask()">
+        <i class="fas fa-plus"></i> Add Task
+      </button>
+    </div>
+    <ul id="taskList" class="task-list"></ul>
+  </div>
+
+  <script>
+    // Original JavaScript functionality unchanged
+    let web3;
+    let todoListContract;
+    let account;
+
+    const init = async () => {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        account = (await web3.eth.getAccounts())[0];
+
+        const abi = [{"constant":true,"inputs":[],"name":"taskCount","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"name":"id","type":"uint256"},{"indexed":false,"name":"content","type":"string"},{"indexed":false,"name":"completed","type":"bool"}],"name":"TaskCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"name":"id","type":"uint256"},{"indexed":false,"name":"completed","type":"bool"}],"name":"TaskCompleted","type":"event"},{"constant":false,"inputs":[{"name":"_content","type":"string"}],"name":"createTask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"_id","type":"uint256"}],"name":"toggleTask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"","type":"uint256"}],"name":"tasks","outputs":[{"name":"id","type":"uint256"},{"name":"content","type":"string"},{"name":"completed","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"}];
+        const address = "0xf1a27C79227eA25B10BEa4E24A84A46feFF5B77A";
+
+        todoListContract = new web3.eth.Contract(abi, address);
+        loadTasks();
+      } else {
+        alert("Please install MetaMask!");
+      }
+    };
+
+    const createTask = async () => {
+      const content = document.getElementById("taskContent").value;
+      if (!content.trim()) {
+        alert("Task cannot be empty!");
+        return;
+      }
+      await todoListContract.methods.createTask(content).send({ from: account });
+      document.getElementById("taskContent").value = "";
+      loadTasks();
+    };
+
+    const loadTasks = async () => {
+      const taskCount = await todoListContract.methods.taskCount().call();
+      const taskList = document.getElementById("taskList");
+      taskList.innerHTML = "";
+
+      for (let i = 1; i <= taskCount; i++) {
+        const task = await todoListContract.methods.tasks(i).call();
+        const taskItem = document.createElement("li");
+        const taskText = document.createElement("span");
+        taskText.textContent = `${task.id}: ${task.content}`;
+        if (task.completed) {
+          taskText.classList.add("task-completed");
+        }
+
+        const statusIcon = document.createElement("i");
+        statusIcon.className = `fas ${task.completed ? "fa-check-circle" : "fa-spinner"}`;
+
+        taskItem.appendChild(taskText);
+        taskItem.appendChild(statusIcon);
+        taskList.appendChild(taskItem);
+      }
+    };
+
+    window.onload = init;
+  </script>
+</body>
+</html>
